@@ -4,9 +4,11 @@ import { useGpaStore } from './stores/gpaStore'
 import GpaTable from './components/GpaTable.vue'
 import GradeConfig from './components/GradeConfig.vue'
 import { exportToExcel } from './utils/excel'
+import qrisImage from './assets/qris.webp'
 
 const store = useGpaStore()
 const showGeminiModal = ref(false)
+const showDonateModal = ref(false)
 const geminiJsonInput = ref('')
 const errorMessage = ref('')
 const copySuccess = ref(false)
@@ -383,6 +385,41 @@ const handleExport = () => {
         </div>
       </div>
     </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-borderLight bg-cardBg/30 mt-auto py-6">
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-textMuted"
+      >
+        <p>© 2026 w-ipk.</p>
+        <div class="flex items-center gap-4">
+          <span
+            >Dibuat oleh
+            <a
+              href="https://wikolaygunata.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hover:text-textMain font-medium underline transition-all"
+              >Wiko Laygunata</a
+            ></span
+          >
+          <span class="text-borderLight">|</span>
+          <button
+            @click="showDonateModal = true"
+            class="flex items-center gap-1.5 hover:text-rose-500 text-textMuted transition-colors font-semibold cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Dukung Saya
+          </button>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <!-- Gemini Import Modal -->
@@ -770,6 +807,89 @@ const handleExport = () => {
 
       <!-- Toast Progress Bar -->
       <div class="toast-progress" :style="{ animationDuration: store.toast.duration + 'ms' }"></div>
+    </div>
+  </Transition>
+
+  <!-- Donate Modal -->
+  <Transition name="fade">
+    <div
+      v-if="showDonateModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <!-- Backdrop -->
+      <div
+        @click="showDonateModal = false"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+      ></div>
+
+      <!-- Modal Card -->
+      <div
+        class="relative bg-cardBg border border-borderLight rounded-2xl w-full max-w-sm overflow-hidden shadow-xl z-10 transform transition-all duration-300 border-t-4 border-t-rose-500 scale-in"
+      >
+        <!-- Header -->
+        <div class="p-4 border-b border-borderLight flex items-center justify-between bg-cardBg">
+          <h3 class="font-display font-bold text-sm text-textMain flex items-center gap-2">
+            <svg class="w-4 h-4 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Dukung w-ipk
+          </h3>
+          <button
+            @click="showDonateModal = false"
+            class="text-textMuted hover:text-textMain transition-colors p-1 rounded-lg hover:bg-lightBg cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 flex flex-col items-center text-center space-y-4 bg-cardBg">
+          <p class="text-xs text-textMuted leading-relaxed max-w-[280px]">
+            Dukungan Anda sangat berarti untuk membantu biaya server & pengembangan w-ipk agar
+            tetap gratis & tanpa iklan!
+          </p>
+
+          <!-- QRIS Image Container -->
+          <div
+            class="bg-white p-3 rounded-xl shadow-inner border border-borderLight flex items-center justify-center relative overflow-hidden group"
+          >
+            <img
+              :src="qrisImage"
+              class="w-56 h-auto object-contain rounded"
+              alt="QRIS Wiko Laygunata"
+            />
+          </div>
+
+          <!-- Hint / Instruction -->
+          <div class="space-y-1">
+            <p class="text-[10px] font-bold text-rose-500 tracking-wide uppercase font-display">QRIS / GPN</p>
+            <p class="text-[10px] text-textMuted leading-normal max-w-[240px]">
+              Scan QRIS di atas menggunakan aplikasi perbankan atau e-wallet
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer/Action -->
+        <div class="p-4 bg-lightBg border-t border-borderLight flex justify-center">
+          <button
+            @click="showDonateModal = false"
+            class="w-full py-2 px-4 bg-cardBg border border-borderLight text-textMain hover:bg-lightBg rounded-xl font-bold text-xs transition cursor-pointer active:scale-95"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
     </div>
   </Transition>
 </template>
