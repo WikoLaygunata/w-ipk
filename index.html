@@ -1,19 +1,115 @@
 <!doctype html>
-<html lang="">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#6366f1" />
+
+    <!-- Primary Meta Tags -->
+    <title>w-ipk - Kalkulator IPK & IP Semester Premium</title>
+    <meta name="title" content="w-ipk - Kalkulator IPK & IP Semester Premium" />
+    <meta
+      name="description"
+      content="Kalkulasi IP Semester (IPS) & Kumulatif secara instan dengan custom grading scale, smart import dari portal, ekspor Excel, dan mode pembulatan fleksibel."
+    />
+    <meta
+      name="keywords"
+      content="kalkulator ipk, kalkulator gpa, kalkulator ips, binus, portal nilai binus, hitung ipk, ipk calculator, excel ipk, w-ipk"
+    />
+    <meta name="author" content="Wiko Laygunata" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="w-ipk - Kalkulator IPK & IP Semester Premium" />
+    <meta
+      property="og:description"
+      content="Kalkulasi IP Semester (IPS) & Kumulatif secara instan dengan custom grading scale, smart import dari portal, ekspor Excel, dan mode pembulatan fleksibel."
+    />
+    <meta property="og:image" content="/favicon.svg" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;850;900&family=Outfit:wght@400;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <title>w-ipk</title>
+
+    <style>
+      /* Initial Loading Splash Screen */
+      body {
+        margin: 0;
+        background-color: #0b0f19;
+      }
+      .initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #0b0f19;
+        color: #6366f1;
+        z-index: 9999;
+        font-family: 'Outfit', 'Inter', sans-serif;
+      }
+      .loader-logo {
+        width: 80px;
+        height: 80px;
+        animation: pulse-glow 2s infinite ease-in-out;
+        margin-bottom: 24px;
+      }
+      .loader-spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid rgba(99, 102, 241, 0.15);
+        border-top: 3px solid #6366f1;
+        border-radius: 50%;
+        animation: spin 0.8s infinite linear;
+      }
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          transform: scale(0.95);
+          filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
+          opacity: 0.8;
+        }
+        50% {
+          transform: scale(1.05);
+          filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.7));
+          opacity: 1;
+        }
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="initial-loader">
+        <div class="loader-logo">
+          <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M256 128L96 224L256 320L416 224L256 128Z" fill="currentColor" />
+            <path
+              d="M160 280V360C160 360 200 400 256 400C312 400 352 360 352 360V280"
+              stroke="currentColor"
+              stroke-width="32"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path d="M416 224V352" stroke="currentColor" stroke-width="32" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="loader-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

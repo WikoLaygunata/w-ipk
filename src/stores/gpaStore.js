@@ -22,6 +22,8 @@ export const useGpaStore = defineStore('gpa', () => {
     }))
   )
 
+  const roundingMode = ref('ceil')
+
   // Load from localStorage if exists
   const savedData = localStorage.getItem('w-ipk-data')
   if (savedData) {
@@ -29,6 +31,7 @@ export const useGpaStore = defineStore('gpa', () => {
       const parsed = JSON.parse(savedData)
       if (parsed.gradeConfig) gradeConfig.value = parsed.gradeConfig
       if (parsed.semesters) semesters.value = parsed.semesters
+      if (parsed.roundingMode) roundingMode.value = parsed.roundingMode
     } catch (e) {
       console.error('Failed to load w-ipk-data from localStorage:', e)
     }
@@ -83,19 +86,36 @@ export const useGpaStore = defineStore('gpa', () => {
         comp.hidden = (comp.score === 0 || comp.score === null)
       }
       
-      // Calculate value = weight * score / 100
-      comp.value = (comp.weight * comp.score) / 100
+      // Safe coercion to number
+      const weightVal = Number(comp.weight) || 0
+      const scoreVal = Number(comp.score) || 0
+      
+      // Calculate value = weightVal * scoreVal / 100
+      comp.value = (weightVal * scoreVal) / 100
       
       if (!comp.hidden) {
         activeScoreSum += comp.value
-        activeWeightSum += comp.weight
+        activeWeightSum += weightVal
       }
     })
     
     if (activeWeightSum > 0) {
       const scaledScore = activeScoreSum * (100 / activeWeightSum)
-      // Round to 3 decimals to avoid floating point precision issues (e.g. 81.00000000000001 -> 81), then ceiling round up
-      course.totalScore = Math.ceil(Math.round(scaledScore * 1000) / 1000)
+      
+      let finalScore
+      const corrected = Math.round(scaledScore * 1000) / 1000
+      if (roundingMode.value === 'ceil') {
+        finalScore = Math.ceil(corrected)
+      } else if (roundingMode.value === 'round') {
+        finalScore = Math.round(corrected)
+      } else if (roundingMode.value === 'floor') {
+        finalScore = Math.floor(corrected)
+      } else {
+        // 'real'
+        finalScore = Math.round(corrected * 100) / 100
+      }
+      
+      course.totalScore = finalScore
       
       const gradeObj = calculateGrade(course.totalScore)
       course.grade = gradeObj.grade
@@ -120,9 +140,10 @@ export const useGpaStore = defineStore('gpa', () => {
       
       semester.courses.forEach(course => {
         if (course.totalScore !== null && course.gradeWeight !== null) {
-          totalSks += course.sks
-          totalWeight += course.gradeWeight * course.sks
-          totalNumericScore += course.totalScore * course.sks
+          const sksVal = Number(course.sks) || 0
+          totalSks += sksVal
+          totalWeight += course.gradeWeight * sksVal
+          totalNumericScore += course.totalScore * sksVal
         }
       })
       
@@ -143,8 +164,9 @@ export const useGpaStore = defineStore('gpa', () => {
     semesters.value.forEach(semester => {
       semester.courses.forEach(course => {
         if (course.totalScore !== null && course.gradeWeight !== null) {
-          totalSks += course.sks
-          totalWeight += course.gradeWeight * course.sks
+          const sksVal = Number(course.sks) || 0
+          totalSks += sksVal
+          totalWeight += course.gradeWeight * sksVal
         }
       })
     })
@@ -205,8 +227,9 @@ export const useGpaStore = defineStore('gpa', () => {
     }
   }
 
-  const importCoursesToActiveSemester = (courses) => {
-    const semester = semesters.value.find(s => s.id === activeSemesterId.value)
+  const importCoursesToActiveSemester = (courses, targetSemesterId = null) => {
+    const semId = targetSemesterId !== null ? targetSemesterId : activeSemesterId.value
+    const semester = semesters.value.find(s => s.id === semId)
     if (!semester) return
 
     // Clear existing courses in active semester
@@ -252,51 +275,93 @@ export const useGpaStore = defineStore('gpa', () => {
     })
   }
 
+  const cycleRoundingMode = () => {
+    console.log('cycleRoundingMode before:', roundingMode.value)
+    const modes = ['ceil', 'round', 'floor', 'real']
+    const currentIndex = modes.indexOf(roundingMode.value)
+    const nextIndex = (currentIndex + 1) % modes.length
+    roundingMode.value = modes[nextIndex]
+    console.log('cycleRoundingMode after:', roundingMode.value)
+    
+    const labels = {
+      ceil: 'Round Up (Ceil)',
+      round: 'Round (Nearest)',
+      floor: 'Round Down (Floor)',
+      real: 'Real (No Rounding)'
+    }
+    showToast(`Mode pembulatan diubah ke: ${labels[roundingMode.value]}`, 'success')
+  }
+
+  const recalculateAndSave = () => {
+    semesters.value.forEach(semester => {
+      semester.courses.forEach(course => {
+        calculateCourseValues(course)
+      })
+    })
+    localStorage.setItem(
+      'w-ipk-data',
+      JSON.stringify({
+        semesters: semesters.value,
+        gradeConfig: gradeConfig.value,
+        roundingMode: roundingMode.value
+      })
+    )
+  }
+
   // Recalculate and persist semesters reactively
   watch(
     semesters,
-    () => {
-      // Recalculate values for all courses deeply
-      semesters.value.forEach(semester => {
-        semester.courses.forEach(course => {
-          calculateCourseValues(course)
-        })
-      })
-      localStorage.setItem(
-        'w-ipk-data',
-        JSON.stringify({
-          semesters: semesters.value,
-          gradeConfig: gradeConfig.value
-        })
-      )
-    },
+    recalculateAndSave,
     { deep: true, immediate: true }
+  )
+
+  // Recalculate and persist when rounding mode changes
+  watch(
+    roundingMode,
+    recalculateAndSave
   )
 
   // Persist gradeConfig changes
   watch(
     gradeConfig,
-    () => {
-      semesters.value.forEach(semester => {
-        semester.courses.forEach(course => {
-          calculateCourseValues(course)
-        })
-      })
-      localStorage.setItem(
-        'w-ipk-data',
-        JSON.stringify({
-          semesters: semesters.value,
-          gradeConfig: gradeConfig.value
-        })
-      )
-    },
+    recalculateAndSave,
     { deep: true }
   )
+
+  const addSemester = () => {
+    const maxId = semesters.value.reduce((max, s) => Math.max(max, s.id), 0)
+    const nextId = maxId + 1
+    semesters.value.push({
+      id: nextId,
+      name: `Semester ${nextId}`,
+      courses: []
+    })
+    activeSemesterId.value = nextId
+    showToast(`Semester ${nextId} berhasil ditambahkan!`, 'success')
+  }
+
+  const deleteSemester = (semesterId) => {
+    if (semesterId <= 8) {
+      showToast('Semester 1-8 tidak dapat dihapus!', 'error')
+      return
+    }
+    const index = semesters.value.findIndex(s => s.id === semesterId)
+    if (index !== -1) {
+      const semName = semesters.value[index].name
+      semesters.value.splice(index, 1)
+      if (activeSemesterId.value === semesterId) {
+        activeSemesterId.value = semesters.value[index - 1]?.id || semesters.value[0]?.id || 1
+      }
+      showToast(`${semName} berhasil dihapus!`, 'info')
+    }
+  }
 
   return {
     gradeConfig,
     semesters,
     activeSemesterId,
+    roundingMode,
+    cycleRoundingMode,
     semesterMetrics,
     cumulativeGPA,
     addCourse,
@@ -304,6 +369,8 @@ export const useGpaStore = defineStore('gpa', () => {
     deleteComponent,
     deleteCourse,
     importCoursesToActiveSemester,
+    addSemester,
+    deleteSemester,
     toast,
     showToast,
     closeToast

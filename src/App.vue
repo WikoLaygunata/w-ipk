@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { useGpaStore } from './stores/gpaStore'
 import GpaTable from './components/GpaTable.vue'
 import GradeConfig from './components/GradeConfig.vue'
-import { exportToExcel } from './utils/excel'
+import { exportToExcel, importFromExcel } from './utils/excel'
 import qrisImage from './assets/qris.webp'
 
 const store = useGpaStore()
@@ -13,6 +13,32 @@ const geminiJsonInput = ref('')
 const errorMessage = ref('')
 const copySuccess = ref(false)
 const showConfig = ref(false)
+const excelInput = ref(null)
+const isMenuOpen = ref(false)
+const selectedImportSemesterId = ref(1)
+
+watch(showGeminiModal, (isOpen) => {
+  if (isOpen) {
+    selectedImportSemesterId.value = store.activeSemesterId
+  }
+})
+
+const handleExcelImport = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  try {
+    await importFromExcel(file, store)
+    store.showToast('Import data dari file Excel berhasil!', 'success')
+  } catch (err) {
+    console.error(err)
+    store.showToast(err.message || 'Gagal membaca atau memvalidasi file Excel.', 'error', 5000)
+  } finally {
+    if (excelInput.value) {
+      excelInput.value.value = ''
+    }
+  }
+}
 
 // Dark/Light Mode state
 const isDarkMode = ref(true)
@@ -89,12 +115,14 @@ const handleGeminiImport = () => {
       return
     }
 
-    store.importCoursesToActiveSemester(parsedData.courses)
+    store.importCoursesToActiveSemester(parsedData.courses, selectedImportSemesterId.value)
 
     // Clear and close
     geminiJsonInput.value = ''
     showGeminiModal.value = false
-    store.showToast('Import via Text berhasil!', 'success')
+    const targetSem = store.semesters.find((s) => s.id === selectedImportSemesterId.value)
+    const semName = targetSem ? targetSem.name : `Semester ${selectedImportSemesterId.value}`
+    store.showToast(`Import via Text ke ${semName} berhasil!`, 'success')
   } catch (err) {
     errorMessage.value =
       'Gagal membaca JSON. Pastikan kamu menyalin seluruh output dari Gemini dengan benar dan valid.'
@@ -202,12 +230,15 @@ const handleExport = () => {
               </svg>
             </button>
 
+            <!-- Mobile Menu Toggle Button (hamburger) -->
             <button
-              @click="showGeminiModal = true"
-              class="text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all flex items-center cursor-pointer"
+              @click="isMenuOpen = !isMenuOpen"
+              class="md:hidden p-2 bg-cardBg border border-borderLight hover:bg-lightBg rounded-lg text-textMuted hover:text-textMain transition-all cursor-pointer shadow-sm flex items-center justify-center"
+              title="Menu"
             >
               <svg
-                class="w-4 h-4 mr-1.5 animate-pulse"
+                v-if="!isMenuOpen"
+                class="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -216,28 +247,156 @@ const handleExport = () => {
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                ></path>
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
               </svg>
-              Import via Text
-            </button>
-            <button
-              @click="handleExport"
-              class="text-sm bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg font-medium shadow-md shadow-brand-500/20 transition-all flex items-center cursor-pointer"
-            >
-              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                ></path>
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
-              Export
             </button>
+
+            <!-- Desktop Menu Controls -->
+            <div class="hidden md:flex items-center space-x-3">
+              <button
+                @click="showGeminiModal = true"
+                class="text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-3 py-1.5 rounded-lg font-medium shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all flex items-center cursor-pointer"
+              >
+                <svg
+                  class="w-4 h-4 mr-1.5 animate-pulse"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  ></path>
+                </svg>
+                Import via Text
+              </button>
+              <!-- Excel Import/Export Controls -->
+              <input
+                type="file"
+                ref="excelInput"
+                accept=".xlsx, .xls"
+                class="hidden"
+                @change="handleExcelImport"
+              />
+              <button
+                @click="excelInput.click()"
+                class="text-sm bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg font-medium shadow-md shadow-brand-500/20 transition-all flex items-center cursor-pointer"
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                  />
+                </svg>
+                Import Excel
+              </button>
+              <button
+                @click="handleExport"
+                class="text-sm bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg font-medium shadow-md shadow-brand-500/20 transition-all flex items-center cursor-pointer"
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  ></path>
+                </svg>
+                Export Excel
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Mobile Dropdown Menu -->
+      <Transition name="expand-menu">
+        <div
+          v-if="isMenuOpen"
+          class="md:hidden absolute top-16 left-0 right-0 z-40 bg-cardBg/95 backdrop-blur-md border-b border-borderLight shadow-lg px-4 py-4 space-y-3"
+        >
+          <!-- Cumulative GPA on mobile dropdown -->
+          <div
+            class="bg-brand-50 border border-brand-200 px-4 py-2.5 rounded-xl flex items-center justify-between"
+          >
+            <span class="text-sm font-medium text-brand-700">Cumulative GPA:</span>
+            <span class="font-display font-bold text-lg text-brand-900">{{
+              store.cumulativeGPA.toFixed(2)
+            }}</span>
+          </div>
+
+          <button
+            @click="
+              () => {
+                showGeminiModal = true
+                isMenuOpen = false
+              }
+            "
+            class="w-full text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center cursor-pointer"
+          >
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            Import via Text
+          </button>
+          <button
+            @click="
+              () => {
+                excelInput.click()
+                isMenuOpen = false
+              }
+            "
+            class="w-full text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg font-medium shadow-md shadow-brand-500/20 transition-all flex items-center justify-center cursor-pointer"
+          >
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              />
+            </svg>
+            Import Excel
+          </button>
+          <button
+            @click="
+              () => {
+                handleExport()
+                isMenuOpen = false
+              }
+            "
+            class="w-full text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg font-medium shadow-md shadow-brand-500/20 transition-all flex items-center justify-center cursor-pointer"
+          >
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            Export Excel
+          </button>
+        </div>
+      </Transition>
     </header>
 
     <!-- Main Content -->
@@ -361,19 +520,46 @@ const handleExport = () => {
         <div class="space-y-4">
           <!-- Tabs -->
           <div class="overflow-x-auto pb-2 custom-scrollbar">
-            <div class="flex space-x-2">
-              <button
+            <div class="flex items-center space-x-2">
+              <!-- Semesters Tab Loops -->
+              <div
                 v-for="sem in store.semesters"
                 :key="sem.id"
-                @click="store.activeSemesterId = sem.id"
-                :class="[
-                  'px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all border cursor-pointer',
-                  store.activeSemesterId === sem.id
-                    ? 'bg-brand-50 border-brand-300 text-brand-700 shadow-sm'
-                    : 'bg-cardBg border-transparent text-textMuted hover:bg-lightBg hover:text-textMain hover:border-borderLight',
-                ]"
+                class="flex items-center space-x-1"
               >
-                {{ sem.name }}
+                <button
+                  @click="store.activeSemesterId = sem.id"
+                  :class="[
+                    'px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all border cursor-pointer flex items-center space-x-1.5',
+                    store.activeSemesterId === sem.id
+                      ? 'bg-brand-50 border-brand-300 text-brand-700 shadow-sm'
+                      : 'bg-cardBg border-transparent text-textMuted hover:bg-lightBg hover:text-textMain hover:border-borderLight',
+                  ]"
+                >
+                  <span>{{ sem.name }}</span>
+                  <!-- Delete button for Semester 9+ -->
+                  <span
+                    v-if="sem.id > 8"
+                    @click.stop="store.deleteSemester(sem.id)"
+                    class="p-0.5 rounded-full text-textMuted hover:text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center cursor-pointer"
+                    title="Hapus Semester"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </span>
+                </button>
+              </div>
+
+              <!-- Add Semester Button -->
+              <button
+                @click="store.addSemester()"
+                class="px-3 py-2 bg-cardBg hover:bg-lightBg border border-borderLight text-textMuted hover:text-textMain rounded-lg font-semibold text-sm transition flex items-center cursor-pointer active:scale-95 flex-shrink-0"
+                title="Tambah Semester"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
               </button>
             </div>
           </div>
@@ -471,6 +657,46 @@ const handleExport = () => {
 
         <!-- Body -->
         <div class="p-6 space-y-6">
+          <!-- Target Semester Selector -->
+          <div
+            class="bg-lightBg/40 border border-borderLight rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div>
+              <label
+                for="import-semester-select"
+                class="block text-xs font-semibold text-textMuted uppercase tracking-wider mb-1"
+                >Target Semester</label
+              >
+              <p class="text-xs text-textMuted">
+                Pilih semester tujuan untuk meng-import data nilai ini.
+              </p>
+            </div>
+            <div class="relative min-w-[160px]">
+              <select
+                id="import-semester-select"
+                v-model="selectedImportSemesterId"
+                class="w-full pl-3 pr-8 py-2 bg-cardBg border border-borderLight rounded-lg text-sm text-textMain focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent appearance-none cursor-pointer"
+              >
+                <option v-for="sem in store.semesters" :key="sem.id" :value="sem.id">
+                  {{ sem.name }}
+                </option>
+              </select>
+              <!-- Custom select arrow icon -->
+              <div
+                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-textMuted"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <div class="space-y-4">
             <!-- Step 1 -->
             <div class="flex items-start space-x-3">
@@ -629,7 +855,7 @@ const handleExport = () => {
                 <h4 class="font-semibold text-textMain text-sm">Tempel Hasil JSON ke Sini</h4>
                 <textarea
                   v-model="geminiJsonInput"
-                  rows="6"
+                  rows="5"
                   placeholder='{ "courses": [...] }'
                   class="mt-2 w-full p-3 font-mono text-xs border border-borderLight rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-lightBg/50 text-textMain"
                 ></textarea>
@@ -812,10 +1038,7 @@ const handleExport = () => {
 
   <!-- Donate Modal -->
   <Transition name="fade">
-    <div
-      v-if="showDonateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
+    <div v-if="showDonateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <!-- Backdrop -->
       <div
         @click="showDonateModal = false"
@@ -856,8 +1079,8 @@ const handleExport = () => {
         <!-- Body -->
         <div class="p-6 flex flex-col items-center text-center space-y-4 bg-cardBg">
           <p class="text-xs text-textMuted leading-relaxed max-w-[280px]">
-            Dukungan Anda sangat berarti untuk membantu biaya server & pengembangan w-ipk agar
-            tetap gratis & tanpa iklan!
+            Dukungan Anda sangat berarti untuk membantu biaya server & pengembangan w-ipk agar tetap
+            gratis & tanpa iklan!
           </p>
 
           <!-- QRIS Image Container -->
@@ -873,7 +1096,9 @@ const handleExport = () => {
 
           <!-- Hint / Instruction -->
           <div class="space-y-1">
-            <p class="text-[10px] font-bold text-rose-500 tracking-wide uppercase font-display">QRIS / GPN</p>
+            <p class="text-[10px] font-bold text-rose-500 tracking-wide uppercase font-display">
+              QRIS / GPN
+            </p>
             <p class="text-[10px] text-textMuted leading-normal max-w-[240px]">
               Scan QRIS di atas menggunakan aplikasi perbankan atau e-wallet
             </p>
@@ -988,5 +1213,16 @@ const handleExport = () => {
   to {
     transform: scaleX(0);
   }
+}
+
+/* Mobile Menu Dropdown Transition */
+.expand-menu-enter-active,
+.expand-menu-leave-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.expand-menu-enter-from,
+.expand-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>
