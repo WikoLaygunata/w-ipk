@@ -111,7 +111,7 @@ const handleGeminiImport = () => {
     const parsedData = JSON.parse(geminiJsonInput.value.trim())
 
     if (!parsedData.courses || !Array.isArray(parsedData.courses)) {
-      errorMessage.value = 'Format JSON tidak sesuai standar w-ipk. Harus memiliki array "courses".'
+      errorMessage.value = 'Format JSON tidak sesuai standar W-IPK. Harus memiliki array "courses".'
       return
     }
 
@@ -176,7 +176,7 @@ const handleExport = () => {
                 />
               </svg>
             </div>
-            <span class="font-display font-bold text-xl tracking-tight text-textMain">w-ipk</span>
+            <span class="font-display font-bold text-xl tracking-tight text-textMain">W-IPK</span>
           </div>
 
           <!-- IPK Global Dashboard -->
@@ -522,11 +522,7 @@ const handleExport = () => {
           <div class="overflow-x-auto pb-2 custom-scrollbar">
             <div class="flex items-center space-x-2">
               <!-- Semesters Tab Loops -->
-              <div
-                v-for="sem in store.semesters"
-                :key="sem.id"
-                class="flex items-center space-x-1"
-              >
+              <div v-for="sem in store.semesters" :key="sem.id" class="flex items-center space-x-1">
                 <button
                   @click="store.activeSemesterId = sem.id"
                   :class="[
@@ -545,7 +541,12 @@ const handleExport = () => {
                     title="Hapus Semester"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </span>
                 </button>
@@ -558,7 +559,12 @@ const handleExport = () => {
                 title="Tambah Semester"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  />
                 </svg>
               </button>
             </div>
@@ -577,7 +583,7 @@ const handleExport = () => {
       <div
         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-textMuted"
       >
-        <p>© 2026 w-ipk.</p>
+        <p>© 2026 W-IPK.</p>
         <div class="flex items-center gap-4">
           <span
             >Dibuat oleh
@@ -1059,7 +1065,7 @@ const handleExport = () => {
                 clip-rule="evenodd"
               />
             </svg>
-            Dukung w-ipk
+            Dukung W-IPK
           </h3>
           <button
             @click="showDonateModal = false"
@@ -1079,7 +1085,7 @@ const handleExport = () => {
         <!-- Body -->
         <div class="p-6 flex flex-col items-center text-center space-y-4 bg-cardBg">
           <p class="text-xs text-textMuted leading-relaxed max-w-[280px]">
-            Dukungan Anda sangat berarti untuk membantu biaya server & pengembangan w-ipk agar tetap
+            Dukungan Anda sangat berarti untuk membantu biaya server & pengembangan W-IPK agar tetap
             gratis & tanpa iklan!
           </p>
 
