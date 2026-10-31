@@ -716,7 +716,7 @@ const handleExport = () => {
                 <p class="text-xs text-textMuted mt-1">
                   Kunjungi halaman portal nilai di
                   <a
-                    href="https://newacadservices.apps.binus.ac.id/newStudent/hash/score/viewscore"
+                    href="https://newacadservices.apps.binus.ac.id/acadservices/learning/viewscore"
                     target="_blank"
                     class="text-brand-600 hover:text-brand-700 font-medium inline-flex items-center underline"
                   >
